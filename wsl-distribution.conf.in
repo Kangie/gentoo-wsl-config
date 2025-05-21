@@ -1,0 +1,13 @@
+# See https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#add-the-wsl-distribution-configuration-file
+[oobe]
+command = /etc/oobe.sh
+defaultUid = 1000
+defaultName = "Gentoo"
+
+[shortcut]
+enabled = true
+icon = @libdir@/wsl/gentoo.ico
+
+[windowsterminal]
+enabled = true
+ProfileTemplate = @libdir@/wsl/terminal-profile.json

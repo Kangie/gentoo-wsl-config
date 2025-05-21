@@ -1,0 +1,6 @@
+option(
+    'systemd',
+    type: 'boolean',
+    value: false,
+    description: 'Enable systemd support',
+)

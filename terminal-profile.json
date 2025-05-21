@@ -1,0 +1,30 @@
+{
+  "profiles": [
+    {
+      "antialiasingMode": "aliased",
+      "fontWeight": "bold",
+      "colorScheme": "Gentoo"
+    }
+  ],
+  "schemes": [
+    {
+      "name": "Gentoo",
+      "black": "#0C0C0C",
+      "red": "#D9534F",
+      "green": "#73D216",
+      "yellow": "#C19C00",
+      "blue": "#0037DA",
+      "purple": "#54487A",
+      "cyan": "#3A96DD",
+      "white": "#FAFAFA",
+      "brightBlack": "#767676",
+      "brightRed": "#E74856",
+      "brightGreen": "#16C60C",
+      "brightYellow": "#F9F1A5",
+      "brightBlue": "#3B78FF",
+      "brightPurple": "#6E56AF",
+      "brightCyan": "#61D6D6",
+      "brightWhite": "#F2F2F2"
+    }
+  ]
+}

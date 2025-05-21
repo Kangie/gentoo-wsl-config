@@ -1,0 +1,3 @@
+# For all available options see https://learn.microsoft.com/en-us/windows/wsl/wsl-config
+[boot]
+systemd=@systemd@

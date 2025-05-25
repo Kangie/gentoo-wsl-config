@@ -184,6 +184,7 @@ mask_systemd_units() {
 	local known_bad_units=(
 		NetworkManager.service
 		systemd-networkd.service
+		systemd-networkd.socket
 		systemd-resolved.service
 		systemd-tmpfiles-clean.service
 		systemd-tmpfiles-clean.timer

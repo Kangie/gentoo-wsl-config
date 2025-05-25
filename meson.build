@@ -1,4 +1,4 @@
-project('gentoo-wsl-config', 'c', version: '0.1.0', meson_version: '>=1.1.0') # meson.options
+project('gentoo-wsl-config', 'c', version: '0.1.3', meson_version: '>=1.1.0')  # meson.options
 # This is not the 'c' you're looking for
 
 # This project creates and installs the WSL configuration files for Gentoo Linux.
@@ -6,9 +6,12 @@ project('gentoo-wsl-config', 'c', version: '0.1.0', meson_version: '>=1.1.0') # 
 configure_file(
     input: 'wsl.conf.in',
     output: 'wsl.conf',
-    configuration: configuration_data({
-        'systemd': get_option('systemd').to_string().to_lower(),
-    }),
+    configuration: configuration_data(
+        {
+            'systemd': get_option('systemd').to_string().to_lower(),
+            'version': meson.project_version(),
+        },
+    ),
     install_dir: get_option('sysconfdir'),
     install_mode: 'rw-r--r--',
 )
@@ -16,9 +19,13 @@ configure_file(
 configure_file(
     input: 'wsl-distribution.conf.in',
     output: 'wsl-distribution.conf',
-    configuration: configuration_data({
-        'libdir': get_option('libdir'),
-    }),
+    configuration: configuration_data(
+        {
+            'datadir': get_option('prefix') / get_option('datadir'),
+            'libexecdir': get_option('prefix') / get_option('libexecdir'),
+            'version': meson.project_version(),
+        },
+    ),
     install_dir: get_option('sysconfdir'),
     install_mode: 'rw-r--r--',
 )

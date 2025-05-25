@@ -1,5 +1,7 @@
 #!/bin/bash
-
+# OOBE Script for Gentoo Linux on WSL
+# This script is run during the first launch of the Gentoo WSL distribution.
+# It sets up a user account and configures the root password.
 # https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#add-the-wsl-distribution-configuration-file
 
 DEFAULT_UID=1000
@@ -179,7 +181,9 @@ prompt_password() {
 # Banner and Info
 # =========================
 
-head /etc/issue.logo
+echo
+# don't set the background colour; skip the output template
+sed -e 's/;40//g' /etc/issue.logo | head
 
 echo "Welcome to Gentoo Linux ($(uname -m)) on Windows Subsystem for Linux (WSL)!"
 echo

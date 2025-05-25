@@ -6,7 +6,8 @@ This repository contains a configuration for Gentoo Linux running on Windows Sub
 It is designed to provide a seamless experience for users who want to run (or try) Gentoo on their Windows machines.
 
 This package should be installed in the WSL 2 environment; it is not intended to be used on a native Gentoo installation.
-It still requires that users follow an abridged version of the Gentoo Handbook to set up their system—we only provide config and an OOBE script to help users get started.
+It still requires that users follow an abridged version of the Gentoo Handbook to set up their system—we only provide config
+and an OOBE script to help users get started.
 
 The configuration is designed to be used with WSL 2 (``>=2.4.4+``) and has not been tested with WSL 1.
 
@@ -37,7 +38,8 @@ To build the package locally, you will need to have the following dependencies i
 * ``meson build`` and ``ninja`` (or ``samurai``), or
 * ``muon``
 
-The WSL `build a custom distro <https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#test-the-distribution-locally>`_ page contains intructions for testing a custom WSL distro locally.
+The WSL `build a custom distro <https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#test-the-distribution-locally>`_
+page contains intructions for testing a custom WSL distro locally.
 
 Icon Generation
 ---------------
@@ -54,34 +56,11 @@ To generate icon(s), run the following command:
 End users
 =========
 
-End users should install Gentoo for WSL via the Windows Store; this package will be included in the image.
+End users should install Gentoo for WSL via the Windows Store, or by fetching a tarball (``.wsl`` file) directly from Gentoo;
+this package will be included in the installation and configured automatically.
 
-If not using the Windows Store, you can install this package via the command line:
+If you are doing this manually, for some reason, you can install this package via the command line:
 
 .. code-block:: console
 
     root@wsl# emerge sys-apps/gentoo-wsl-config
-
-SystemD support
-===============
-
-The default configuration for Gentoo WSL (as shipped in the Windows Store) does not include SystemD.
-
-Installing this package with the ``systemd`` USE flag (or manually compiling with ``-Dsystemd=true``)
-will enable SystemD support in WSL, however it is not recommended for most users;
-the following services must be disabled or masked as they are known to cause issues:
-
-* ``systemd-resolved.service``
-* ``systemd-networkd.service``
-* ``NetworkManager.service``
-* ``systemd-tmpfiles-setup.service``
-* ``systemd-tmpfiles-clean.service``
-* ``systemd-tmpfiles-clean.timer``
-* ``systemd-tmpfiles-setup-dev-early.service``
-* ``systemd-tmpfiles-setup-dev.service``
-* ``tmp.mount``
-
-.. Tip::
-    You should be able to use ``catalyst`` to build a custom Gentoo WSL image with SystemD support, if this is desired.
-
-See `here <https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#systemd-recommendations>`_ for more information.

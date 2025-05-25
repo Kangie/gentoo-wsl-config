@@ -79,6 +79,9 @@ maybe_run() {
 
 show_install_tips() {
 	local mode="${1:-}"
+	if [[ -n "$mode" ]]; then
+		mode=" $mode"
+	fi
 	cat <<-EOF
 
 		OOBE complete!${mode}
@@ -199,7 +202,7 @@ mask_systemd_units() {
 	# in the future; at least it's not a footgun!
 	log "Masking known problematic systemd units for WSL compatibility."
 	for unit in "${known_bad_units[@]}"; do
-		maybe_run systemctl mask "$unit"
+		maybe_run systemctl mask "$unit" 2>/dev/null # This is very noisy
 		if [[ $? -ne 0 ]]; then
 			log "Failed to mask unit: $unit"
 		fi
@@ -296,29 +299,27 @@ main_oobe_loop() {
 				exit 1
 			fi
 
+			echo "User '$username' created successfully."
+			echo "'root' password set to match the new user password."
+
 			if command -v systemctl >/dev/null 2>&1; then
-				log "Systemd detected. Running systemd-machine-id-setup."
+				log "This is a systemd image: running systemd-machine-id-setup."
 				mask_systemd_units
 				maybe_run systemd-machine-id-setup
 				echo "You should restart WSL to apply systemd changes."
 				echo "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
 			fi
 
-			if [[ -n "$DEBUG_OOBE" ]]; then
+			if [[ -z "$DEBUG_OOBE" ]]; then
+				show_install_tips
 				echo
+			else
 				echo "[DEBUG] OOBE complete! No changes made."
 				show_install_tips " (DEBUG MODE)"
 				echo
-				break
-			else
-				echo "User '$username' created successfully."
-				echo "Setting root password to match the new user password."
-				echo "Root password set. You can now use 'su' to become root."
-				echo
-				show_install_tips
-				echo
-				break
 			fi
+
+			break
 		else
 			echo "Failed to create user. See error above."
 		fi

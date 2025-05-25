@@ -25,7 +25,7 @@ configure_file(
 
 install_data(
     'oobe.sh',
-    install_dir: get_option('sysconfdir'),
+    install_dir: get_option('libexecdir') / 'wsl',
     install_mode: 'rwxr--r--',
 )
 

@@ -202,8 +202,6 @@ mask_systemd_units() {
 		maybe_run systemctl mask "$unit"
 		if [[ $? -ne 0 ]]; then
 			log "Failed to mask unit: $unit"
-		else
-			log "Masked unit: $unit"
 		fi
 	done
 }

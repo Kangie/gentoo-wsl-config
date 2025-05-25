@@ -1,6 +1,7 @@
 {
   "profiles": [
     {
+      "antialiasingMode": "cleartype",
       "colorScheme": "Gentoo"
     }
   ],

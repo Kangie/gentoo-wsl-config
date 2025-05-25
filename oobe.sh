@@ -300,6 +300,8 @@ main_oobe_loop() {
 				log "Systemd detected. Running systemd-machine-id-setup."
 				mask_systemd_units
 				maybe_run systemd-machine-id-setup
+				echo "You should restart WSL to apply systemd changes."
+				echo "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
 			fi
 
 			if [[ -n "$DEBUG_OOBE" ]]; then

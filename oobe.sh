@@ -86,11 +86,11 @@ show_install_tips() {
 			- Use 'emerge --sync' to sync the portage tree (as root).
 			- Use 'emerge -uDN @world' to update the system (as root).
 			- Read the Gentoo Handbook for more information:
-				https://wiki.gentoo.org/wiki/Handbook:Main_Page
+			    https://wiki.gentoo.org/wiki/Handbook:Main_Page
 			- Consider using the binary package host (binhost) and only compiling
 			  packages where you want to change the USE flags.
 			  This can save time and resources. See:
-				https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart
+			    https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart
 			- For privilege escalation helpers:
 				su -c 'emerge app-admin/sudo'
 				su -c 'emerge app-admin/doas'

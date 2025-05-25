@@ -1,7 +1,6 @@
 {
   "profiles": [
     {
-      "antialiasingMode": "aliased",
       "fontWeight": "bold",
       "colorScheme": "Gentoo"
     }

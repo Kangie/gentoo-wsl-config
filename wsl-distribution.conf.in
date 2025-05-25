@@ -1,6 +1,6 @@
 # See https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#add-the-wsl-distribution-configuration-file
 [oobe]
-command = /etc/oobe.sh
+command = @libexecdir@/wsl/oobe.sh
 defaultUid = 1000
 defaultName = "Gentoo"
 

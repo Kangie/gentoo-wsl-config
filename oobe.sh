@@ -20,7 +20,8 @@ log() {
 # Check for required external commands
 for cmd in openssl chpasswd; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
-		log "Required command '$cmd' not found. Please log an issue on bugs.gentoo.org."
+		log "Required command '$cmd' not found."
+		echo "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
 		exit 97
 	fi
 done
@@ -37,7 +38,7 @@ groups=(users wheel)
 for grp in "${groups[@]}"; do
 	if ! getent group "$grp" > /dev/null; then
 		log "Required group '$grp' does not exist. This is probably a bug."
-		echo "Please report this issue to the Gentoo WSL team."
+		echo "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
 		exit 98
 	fi
 done

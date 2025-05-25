@@ -178,6 +178,35 @@ prompt_password() {
 	done
 }
 
+
+mask_systemd_units() {
+	# https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#systemd-recommendations
+	local known_bad_units=(
+		NetworkManager.service
+		systemd-networkd.service
+		systemd-resolved.service
+		systemd-tmpfiles-clean.service
+		systemd-tmpfiles-clean.timer
+		systemd-tmpfiles-setup-dev-early.service
+		systemd-tmpfiles-setup-dev.service
+		systemd-tmpfiles-setup.service
+		tmp.mount
+	)
+
+	# systemctl mask will make a symlink to /dev/null even if the unit does not exist,
+	# so we can safely run this even if the units are not present, and prevent issues
+	# in the future; at least it's not a footgun!
+	log "Masking known problematic systemd units for WSL compatibility."
+	for unit in "${known_bad_units[@]}"; do
+		maybe_run systemctl mask "$unit"
+		if [[ $? -ne 0 ]]; then
+			log "Failed to mask unit: $unit"
+		else
+			log "Masked unit: $unit"
+		fi
+	done
+}
+
 # =========================
 # Banner and Info
 # =========================
@@ -266,6 +295,12 @@ main_oobe_loop() {
 				log "Cleaning up user '$username'."
 				maybe_run userdel -r "$username"
 				exit 1
+			fi
+
+			if command -v systemctl >/dev/null 2>&1; then
+				log "Systemd detected. Running systemd-machine-id-setup."
+				mask_systemd_units
+				maybe_run systemd-machine-id-setup
 			fi
 
 			if [[ -n "$DEBUG_OOBE" ]]; then

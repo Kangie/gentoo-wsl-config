@@ -17,6 +17,12 @@ log() {
 	echo "[OOBE] $*" >&2
 }
 
+debug_log() {
+	if [[ -n "$DEBUG_OOBE" ]]; then
+		echo "[DEBUG] $*" >&2
+	fi
+}
+
 # Check for required external commands
 for cmd in openssl chpasswd; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -209,6 +215,12 @@ mask_systemd_units() {
 	done
 }
 
+cleanup_and_exit() {
+	log "Cleaning up user '$username'."
+	maybe_run userdel -r "$username"
+	exit 1
+}
+
 # =========================
 # Banner and Info
 # =========================
@@ -228,13 +240,11 @@ echo 'For more information visit: https://aka.ms/wslusers'
 
 DEBUG_OOBE="${DEBUG_OOBE:-}"
 
-if [[ -n "$DEBUG_OOBE" ]]; then
-	echo "DEBUG_OOBE is set: Skipping user_exists_by_uid check and system modifications."
-fi
+debug_log "DEBUG_OOBE is set: Skipping user_exists_by_uid check and system modifications."
 
 if [[ -z "$DEBUG_OOBE" ]]; then
 	if user_exists_by_uid "$DEFAULT_UID"; then
-		echo 'User account already exists, skipping creation'
+		log 'User account already exists, skipping creation'
 		exit 0
 	fi
 fi
@@ -277,37 +287,27 @@ main_oobe_loop() {
 			printf '%s:%s\n' "root" "$root_hash" | maybe_run chpasswd -e
 			chpasswd_root_status=$?
 
-			if [[ -n "$DEBUG_OOBE" ]]; then
-				log "Debug: user chpasswd exit status: $chpasswd_user_status"
-				log "Debug: root chpasswd exit status: $chpasswd_root_status"
-			fi
-
 			if [[ $chpasswd_user_status -ne 0 && $chpasswd_root_status -ne 0 ]]; then
 				log "ERROR: Failed to set passwords for both user '$username' and root."
-				log "Cleaning up user '$username'."
-				maybe_run userdel -r "$username"
-				exit 1
+				cleanup_and_exit
 			elif [[ $chpasswd_user_status -ne 0 ]]; then
 				log "ERROR: Failed to set password for user '$username', but root password was set."
-				log "Cleaning up user '$username'."
-				maybe_run userdel -r "$username"
-				exit 1
+				cleanup_and_exit
 			elif [[ $chpasswd_root_status -ne 0 ]]; then
 				log "ERROR: Failed to set password for root, but user '$username' password was set."
-				log "Cleaning up user '$username'."
-				maybe_run userdel -r "$username"
-				exit 1
+				cleanup_and_exit
 			fi
 
 			echo "User '$username' created successfully."
 			echo "'root' password set to match the new user password."
 
 			if command -v systemctl >/dev/null 2>&1; then
-				log "This is a systemd image: running systemd-machine-id-setup."
+				log "systemd detected"
 				mask_systemd_units
+				log "running systemd-machine-id-setup"
 				maybe_run systemd-machine-id-setup
-				echo "You should restart WSL to apply systemd changes."
-				echo "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
+				log "You should restart WSL to apply systemd changes."
+				log "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
 			fi
 
 			if [[ -z "$DEBUG_OOBE" ]]; then

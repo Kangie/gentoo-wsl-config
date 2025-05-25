@@ -36,10 +36,10 @@ install_data(
     install_mode: 'rwxr--r--',
 )
 
-lib_files = files('gentoo.ico', 'terminal-profile.json')
+misc_files = files('gentoo.ico', 'terminal-profile.json')
 
 install_data(
-    lib_files,
-    install_dir: get_option('libdir') / 'wsl',
+    misc_files,
+    install_dir: get_option('datadir') / 'wsl',
     install_mode: 'rw-r--r--',
 )

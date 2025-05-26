@@ -112,7 +112,12 @@ maybe_run() {
 }
 
 show_install_tips() {
-	local mode="${1:-}"
+	local mode
+	if [[ -n "$DEBUG_OOBE" ]]; then
+		mode="(DEBUG mode)"
+	else
+		mode=""
+	fi
 	if [[ -n "$mode" ]]; then
 		mode=" $mode"
 	fi
@@ -357,14 +362,9 @@ main_oobe_loop() {
 				ewarn "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
 			fi
 
-			if [[ -z "$DEBUG_OOBE" ]]; then
-				show_install_tips
-				echo
-			else
-				edebug "OOBE complete! No changes made."
-				show_install_tips " (DEBUG MODE)"
-				echo
-			fi
+			edebug "OOBE complete! No changes made."
+			show_install_tips
+			echo
 
 			break
 		else

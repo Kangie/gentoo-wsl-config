@@ -35,7 +35,7 @@ die() {
 }
 
 # Check for required external commands
-for cmd in openssl chpasswd; do
+for cmd in chpasswd getuto openssl; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
 		eerror "Required command '$cmd' not found."
 		eerror "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
@@ -66,6 +66,23 @@ trap 'unset password password2 username' EXIT
 # =========================
 # Helper Functions
 # =========================
+
+check_network_connectivity() {
+	local test_hosts=("1.1.1.1" "8.8.8.8" "9.9.9.9" "www.gentoo.org")
+	local timeout=5
+
+	edebug "Checking network connectivity..."
+
+	for host in "${test_hosts[@]}"; do
+		if ping -c 1 -W "$timeout" "$host" >/dev/null 2>&1; then
+			edebug "Network connectivity confirmed via $host"
+			return 0
+		fi
+	done
+
+	edebug "Network connectivity check failed for all test hosts"
+	return 1
+}
 
 shake_salt() {
 	LC_ALL=C < /dev/urandom tr -dc 'A-Za-z0-9./' | head -c16
@@ -263,8 +280,11 @@ fi
 main_oobe_loop() {
 	local username password user_hash root_hash
 	local chpasswd_user_status chpasswd_root_status
+	local has_network="false"
 
 	edebug "Starting OOBE loop"
+
+	check_network_connectivity && has_network="true"
 
 	while true; do
 		read -p 'Enter new UNIX username: ' username
@@ -311,6 +331,20 @@ main_oobe_loop() {
 
 			einfo "User '$username' created successfully."
 			einfo "'root' password set to match the new user password."
+
+			if [[ "$has_network" == "true" ]]; then
+				einfo "Configuring binary package verification keyring with Gentoo trust tool (getuto) ..."
+				maybe_run getuto 2>/dev/null
+				if [[ $? -eq 0 ]]; then
+					einfo "getuto configuration completed successfully"
+				else
+					ewarn "Warning: getuto configuration failed, this is not a critical issue,"
+					ewarn "but you may want to run 'getuto' manually later."
+				fi
+			else
+				ewarn "Network connectivity unavailable - skipping getuto binary package setup"
+				ewarn "You can run 'getuto' manually later when network is available"
+			fi
 
 			if command -v systemctl >/dev/null 2>&1; then
 				einfo "systemd detected"

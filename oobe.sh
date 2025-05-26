@@ -319,7 +319,12 @@ main_oobe_loop() {
 
 	edebug "Starting OOBE loop"
 
-	check_network_connectivity && has_network="true"
+	if check_network_connectivity; then
+		einfo "Network connectivity detected."
+		has_network="true"
+	else
+		ewarn "No network connectivity detected. Some features may be limited."
+	fi
 
 	while true; do
 		read -p 'Enter new UNIX username: ' username

@@ -34,12 +34,20 @@ die() {
 	exit 1
 }
 
+report_bug() {
+	exit_code="$1"
+	if [[ -z "$exit_code" ]]; then
+		exit_code=1
+	fi
+	eerror "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
+	exit "$exit_code"
+}
+
 # Check for required external commands
 for cmd in chpasswd getuto openssl; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
 		eerror "Required command '$cmd' not found."
-		eerror "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
-		exit 97
+		report_bug 97
 	fi
 done
 
@@ -57,13 +65,12 @@ groups=(users wheel)
 for grp in "${groups[@]}"; do
 	if ! getent group "$grp" > /dev/null; then
 		eerror "Required group '$grp' does not exist. This is probably a bug."
-		echo "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
-		exit 98
+		report_bug 98
 	fi
 done
 
 # Trap to unset sensitive variables on exit
-trap 'unset password password2 username' EXIT
+trap 'unset password password2 username user_hash root_hash' EXIT
 
 # =========================
 # Helper Functions
@@ -105,6 +112,15 @@ hashpw() {
 # $6$ = SHA-512, followed by base64-encoded salt and 43+ char hash
 is_hash_like() {
 	[[ "$1" =~ ^\$6\$[A-Za-z0-9./]+\$[A-Za-z0-9./]{43,}$ ]]
+}
+
+# Clear sensitive variables from memory
+clear_sensitive_vars() {
+	local -a vars_to_clear=("$@")
+	for var in "${vars_to_clear[@]}"; do
+		printf -v "$var" ''
+		unset "$var"
+	done
 }
 
 maybe_run() {
@@ -229,8 +245,7 @@ prompt_password() {
 		fi
 
 		echo "$password"
-		password=""; password2=""
-		unset password password2
+		clear_sensitive_vars password password2
 		return 0
 	done
 }
@@ -336,11 +351,7 @@ main_oobe_loop() {
 			printf '%s:%s\n' "root" "$root_hash" | maybe_run chpasswd -e
 			chpasswd_root_status=$?
 
-			# Clear sensitive data from memory immediately
-			password=''
-			user_hash=''
-			root_hash=''
-			unset user_hash root_hash password
+			clear_sensitive_vars password user_hash root_hash
 
 			if [[ $chpasswd_user_status -ne 0 && $chpasswd_root_status -ne 0 ]]; then
 				cleanup_and_exit "Failed to set passwords for both user '$username' and root."

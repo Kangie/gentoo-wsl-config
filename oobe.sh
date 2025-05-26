@@ -348,9 +348,16 @@ main_oobe_loop() {
 					ewarn "Warning: getuto configuration failed, this is not a critical issue,"
 					ewarn "but you may want to run 'getuto' manually later."
 				fi
+				einfo "Setting up gentoo repository for git sync ..."
+				maybe_run eselect repository disable gentoo
+				# creating it with eselect-repository will default to git sync
+				maybe_run eselect repository enable gentoo
+				einfo "syncing the Gentoo repository ..."
+				maybe_run emerge --sync
 			else
 				ewarn "Network connectivity unavailable - skipping getuto binary package setup"
 				ewarn "You can run 'getuto' manually later when network is available"
+				ewarn "the Gentoo repository will need to be synced manually before portage can be used."
 			fi
 
 			if command -v systemctl >/dev/null 2>&1; then

@@ -13,28 +13,39 @@ set -o pipefail
 # Logging and Environment
 # =========================
 
-log() {
-	echo "[OOBE] $*" >&2
+edebug() {
+	[[ -n "$DEBUG_OOBE" ]] && echo -e " \033[35;1m*\033[0m [DEBUG] $*" >&2
 }
 
-debug_log() {
-	if [[ -n "$DEBUG_OOBE" ]]; then
-		echo "[DEBUG] $*" >&2
-	fi
+einfo() {
+	echo -e " \033[32;1m*\033[0m $*"
+}
+
+ewarn() {
+	echo -e " \033[33;1m*\033[0m $*"
+}
+
+eerror() {
+	echo -e " \033[31;1m*\033[0m $*" >&2
+}
+
+die() {
+	eerror "\033[31;1m!!!\033[0m $*"
+	exit 1
 }
 
 # Check for required external commands
 for cmd in openssl chpasswd; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
-		log "Required command '$cmd' not found."
-		echo "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
+		eerror "Required command '$cmd' not found."
+		eerror "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
 		exit 97
 	fi
 done
 
 # Enforce bash
 if [[ -z "$BASH_VERSION" ]]; then
-	log "This script requires bash."
+	eerror "This script requires bash."
 	exit 99
 fi
 
@@ -43,7 +54,7 @@ groups=(users wheel)
 # Validate required groups exist
 for grp in "${groups[@]}"; do
 	if ! getent group "$grp" > /dev/null; then
-		log "Required group '$grp' does not exist. This is probably a bug."
+		eerror "Required group '$grp' does not exist. This is probably a bug."
 		echo "Please report this issue to the Gentoo WSL Project on bugs.gentoo.org."
 		exit 98
 	fi
@@ -77,7 +88,7 @@ is_hash_like() {
 
 maybe_run() {
 	if [[ -n "$DEBUG_OOBE" ]]; then
-		echo "[DEBUG] Would run:" "$@"
+		edebug "Would run:" "$@"
 	else
 		"$@"
 	fi
@@ -125,23 +136,23 @@ validate_username() {
 	local username="$1"
 	# POSIX username: start with [a-z_], then [a-z0-9_-]{0,30}, optionally ending with $
 	if [[ ! "$username" =~ ^[a-z_][a-z0-9_-]{0,30}\$?$ ]]; then
-		echo "Username must start with a letter or underscore and contain only lowercase letters, digits, underscores, or dashes." >&2
+		eerror "Username must start with a letter or underscore and contain only lowercase letters, digits, underscores, or dashes." >&2
 		return 1
 	fi
 	if [[ -z "$username" ]]; then
-		echo "Username cannot be empty."
+		eerror "Username cannot be empty."
 		return 1
 	fi
 	if [[ "$username" =~ [[:space:]] ]]; then
-		echo "Username cannot contain spaces."
+		eerror "Username cannot contain spaces."
 		return 1
 	fi
 	if [[ "$username" == "root" ]]; then
-		echo "Cannot use 'root' as username."
+		eerror "Cannot use 'root' as username."
 		return 1
 	fi
 	if user_exists_by_name "$username"; then
-		echo "User '$username' already exists."
+		eerror "User '$username' already exists."
 		return 1
 	fi
 	return 0
@@ -206,19 +217,19 @@ mask_systemd_units() {
 	# systemctl mask will make a symlink to /dev/null even if the unit does not exist,
 	# so we can safely run this even if the units are not present, and prevent issues
 	# in the future; at least it's not a footgun!
-	log "Masking known problematic systemd units for WSL compatibility."
+	einfo "Masking known problematic systemd units for WSL compatibility."
 	for unit in "${known_bad_units[@]}"; do
 		maybe_run systemctl mask "$unit" 2>/dev/null # This is very noisy
 		if [[ $? -ne 0 ]]; then
-			log "Failed to mask unit: $unit"
+			ewarn "Failed to mask unit: $unit"
 		fi
 	done
 }
 
 cleanup_and_exit() {
-	log "Cleaning up user '$username'."
+	einfo "Cleaning up user '$username'."
 	maybe_run userdel -r "$username"
-	exit 1
+	die "$*"
 }
 
 # =========================
@@ -240,11 +251,11 @@ echo 'For more information visit: https://aka.ms/wslusers'
 
 DEBUG_OOBE="${DEBUG_OOBE:-}"
 
-debug_log "DEBUG_OOBE is set: Skipping user_exists_by_uid check and system modifications."
+edebug "DEBUG_OOBE is set: Skipping user_exists_by_uid check and system modifications."
 
 if [[ -z "$DEBUG_OOBE" ]]; then
 	if user_exists_by_uid "$DEFAULT_UID"; then
-		log 'User account already exists, skipping creation'
+		einfo 'User account already exists, skipping creation'
 		exit 0
 	fi
 fi
@@ -252,6 +263,9 @@ fi
 main_oobe_loop() {
 	local username password user_hash root_hash
 	local chpasswd_user_status chpasswd_root_status
+
+	edebug "Starting OOBE loop"
+
 	while true; do
 		read -p 'Enter new UNIX username: ' username
 		validate_username "$username" || continue
@@ -271,14 +285,9 @@ main_oobe_loop() {
 			root_hash=$(hashpw "$password")
 
 			if ! is_hash_like "$user_hash"; then
-				log "ERROR: Generated user password hash does not look valid: $user_hash"
-				maybe_run userdel -r "$username"
-				exit 1
-			fi
-			if ! is_hash_like "$root_hash"; then
-				log "ERROR: Generated root password hash does not look valid: $root_hash"
-				maybe_run userdel -r "$username"
-				exit 1
+				cleanup_and_exit "Generated user password hash does not look valid: $user_hash"
+			elif ! is_hash_like "$root_hash"; then
+				cleanup_and_exit "Generated root password hash does not look valid: $root_hash"
 			fi
 
 			printf '%s:%s\n' "$username" "$user_hash" | maybe_run chpasswd -e
@@ -287,34 +296,36 @@ main_oobe_loop() {
 			printf '%s:%s\n' "root" "$root_hash" | maybe_run chpasswd -e
 			chpasswd_root_status=$?
 
+			password=''
+			user_hash=''
+			root_hash=''
+			unset user_hash root_hash password
+
 			if [[ $chpasswd_user_status -ne 0 && $chpasswd_root_status -ne 0 ]]; then
-				log "ERROR: Failed to set passwords for both user '$username' and root."
-				cleanup_and_exit
+				cleanup_and_exit "Failed to set passwords for both user '$username' and root."
 			elif [[ $chpasswd_user_status -ne 0 ]]; then
-				log "ERROR: Failed to set password for user '$username', but root password was set."
-				cleanup_and_exit
+				cleanup_and_exit "Failed to set password for user '$username', but root password was set."
 			elif [[ $chpasswd_root_status -ne 0 ]]; then
-				log "ERROR: Failed to set password for root, but user '$username' password was set."
-				cleanup_and_exit
+				cleanup_and_exit "Failed to set password for root, but user '$username' password was set."
 			fi
 
-			echo "User '$username' created successfully."
-			echo "'root' password set to match the new user password."
+			einfo "User '$username' created successfully."
+			einfo "'root' password set to match the new user password."
 
 			if command -v systemctl >/dev/null 2>&1; then
-				log "systemd detected"
+				einfo "systemd detected"
 				mask_systemd_units
-				log "running systemd-machine-id-setup"
+				einfo "running systemd-machine-id-setup"
 				maybe_run systemd-machine-id-setup
-				log "You should restart WSL to apply systemd changes."
-				log "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
+				ewarn "You should restart WSL to apply systemd changes."
+				ewarn "Run 'wsl --terminate Gentoo' or 'wsl --shutdown' in PowerShell or Command Prompt."
 			fi
 
 			if [[ -z "$DEBUG_OOBE" ]]; then
 				show_install_tips
 				echo
 			else
-				echo "[DEBUG] OOBE complete! No changes made."
+				einfo "[DEBUG] OOBE complete! No changes made."
 				show_install_tips " (DEBUG MODE)"
 				echo
 			fi

@@ -14,7 +14,9 @@ set -o pipefail
 # =========================
 
 edebug() {
-	[[ -n "$DEBUG_OOBE" ]] && echo -e " \033[35;1m*\033[0m [DEBUG] $*" >&2
+	if [[ -n "$DEBUG_OOBE" ]]; then
+		echo -e " \033[35;1m*\033[0m [DEBUG] $*" >&2
+	fi
 }
 
 einfo() {

@@ -111,6 +111,14 @@ maybe_run() {
 	fi
 }
 
+maybe_run_quiet() {
+	if [[ -n "$DEBUG_OOBE" ]]; then
+		edebug "Would run (quiet):" "$@"
+	else
+		"$@" 2>/dev/null
+	fi
+}
+
 show_install_tips() {
 	local mode
 	if [[ -n "$DEBUG_OOBE" ]]; then
@@ -243,7 +251,7 @@ mask_systemd_units() {
 	# in the future; at least it's not a footgun!
 	einfo "Masking known problematic systemd units for WSL compatibility."
 	for unit in "${known_bad_units[@]}"; do
-		maybe_run systemctl mask "$unit" 2>/dev/null # This is very noisy
+		maybe_run_quiet systemctl mask "$unit"
 		if [[ $? -ne 0 ]]; then
 			ewarn "Failed to mask unit: $unit"
 		fi
@@ -341,7 +349,7 @@ main_oobe_loop() {
 
 			if [[ "$has_network" == "true" ]]; then
 				einfo "Configuring binary package verification keyring with Gentoo trust tool (getuto) ..."
-				maybe_run getuto 2>/dev/null
+				maybe_run_quiet getuto
 				if [[ $? -eq 0 ]]; then
 					einfo "getuto configuration completed successfully"
 				else
@@ -349,11 +357,11 @@ main_oobe_loop() {
 					ewarn "but you may want to run 'getuto' manually later."
 				fi
 				einfo "Setting up gentoo repository for git sync ..."
-				maybe_run eselect repository disable gentoo
+				maybe_run_quiet eselect repository disable gentoo
 				# creating it with eselect-repository will default to git sync
-				maybe_run eselect repository enable gentoo
+				maybe_run_quiet eselect repository enable gentoo
 				einfo "syncing the Gentoo repository ..."
-				maybe_run emerge --sync
+				maybe_run_quiet emerge --sync
 			else
 				ewarn "Network connectivity unavailable - skipping getuto binary package setup"
 				ewarn "You can run 'getuto' manually later when network is available"

@@ -13,6 +13,8 @@ set -o pipefail
 # Logging and Environment
 # =========================
 
+export LC_ALL=C # Useful for hashes, required for eselect repository
+
 edebug() {
 	if [[ -n "$DEBUG_OOBE" ]]; then
 		echo -e " \033[35;1m*\033[0m [DEBUG] $*" >&2
@@ -96,7 +98,7 @@ check_network_connectivity() {
 }
 
 shake_salt() {
-	LC_ALL=C < /dev/urandom tr -dc 'A-Za-z0-9./' | head -c16
+	< /dev/urandom tr -dc 'A-Za-z0-9./' | head -c16
 }
 
 hashpw() {
@@ -137,7 +139,7 @@ maybe_run_quiet() {
 	if [[ -n "$DEBUG_OOBE" ]]; then
 		edebug "Would run (quiet):" "$@"
 	else
-		"$@" 2>/dev/null
+		"$@" >/dev/null 2>&1
 	fi
 }
 
@@ -322,7 +324,6 @@ main_oobe_loop() {
 	edebug "Starting OOBE loop"
 
 	if check_network_connectivity; then
-		einfo "Network connectivity detected."
 		has_network="true"
 	else
 		ewarn "No network connectivity detected. Some features may be limited."
@@ -383,11 +384,15 @@ main_oobe_loop() {
 					ewarn "but you may want to run 'getuto' manually later."
 				fi
 				einfo "Setting up gentoo repository for git sync ..."
-				maybe_run_quiet eselect repository disable gentoo
+				# Disable the default gentoo repository if it exists
+				if [[ -f /etc/portage/repos.conf/gentoo.conf ]]; then
+					einfo "Disabling and removing existing gentoo repository ..."
+					maybe_run_quiet eselect repository remove -f gentoo
+				fi
 				# creating it with eselect-repository will default to git sync
 				maybe_run_quiet eselect repository enable gentoo
 				einfo "syncing the Gentoo repository ..."
-				maybe_run_quiet emerge --sync
+				maybe_run emerge --sync
 			else
 				# Network-dependent setup must be deferred when offline
 				ewarn "Network connectivity unavailable - skipping getuto binary package setup."

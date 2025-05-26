@@ -359,7 +359,7 @@ main_oobe_loop() {
 				show_install_tips
 				echo
 			else
-				einfo "[DEBUG] OOBE complete! No changes made."
+				edebug "[DEBUG] OOBE complete! No changes made."
 				show_install_tips " (DEBUG MODE)"
 				echo
 			fi

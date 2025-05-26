@@ -121,23 +121,25 @@ show_install_tips() {
 		OOBE complete!${mode}
 
 		Installation Tips:
-			- Use 'emerge --sync' to sync the portage tree (as root).
-			- Use 'emerge -uDN @world' to update the system (as root).
-			- Read the Gentoo Handbook for more information:
-			    https://wiki.gentoo.org/wiki/Handbook:Main_Page
-			- Consider using the binary package host (binhost) and only compiling
-			  packages where you want to change the USE flags.
-			  This can save time and resources. See:
-			    https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart
-			- For privilege escalation helpers:
-				su -c 'emerge app-admin/sudo'
-				su -c 'emerge app-admin/doas'
+		    - Elevate privileges to root using 'su' until you set up sudo or doas.
+		    - Use 'emerge --sync' to sync the portage tree (as root).
+		      + 'emerge-webrsync' is a good alternative for systems with restricted network access.
+		    - Use 'emerge -uDNav @world' to update the system (as root).
+		    - Read the Gentoo Handbook for more information:
+		        https://wiki.gentoo.org/wiki/Handbook:Main_Page
+		    - Consider using the binary package host (binhost) and only compiling
+		      packages where you want to change the USE flags.
+		      This can save time and resources. See:
+		        https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart
+		    - For privilege escalation helpers:
+		        su -c 'emerge app-admin/sudo'
+		        su -c 'emerge app-admin/doas'
 
 		Resources:
-			Gentoo Forums:        https://forums.gentoo.org/
-			Gentoo IRC:           https://web.libera.chat/#gentoo
-			Gentoo Wiki:          https://wiki.gentoo.org/
-			Gentoo in WSL:        https://wiki.gentoo.org/wiki/Gentoo_in_WSL
+		    Gentoo Forums:        https://forums.gentoo.org/
+		    Gentoo IRC:           https://web.libera.chat/#gentoo
+		    Gentoo Wiki:          https://wiki.gentoo.org/
+		    Gentoo in WSL:        https://wiki.gentoo.org/wiki/Gentoo_in_WSL
 	EOF
 }
 
@@ -359,7 +361,7 @@ main_oobe_loop() {
 				show_install_tips
 				echo
 			else
-				edebug "[DEBUG] OOBE complete! No changes made."
+				edebug "OOBE complete! No changes made."
 				show_install_tips " (DEBUG MODE)"
 				echo
 			fi

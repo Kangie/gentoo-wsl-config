@@ -49,6 +49,8 @@ if [[ -z "$BASH_VERSION" ]]; then
 	exit 99
 fi
 
+# Default groups for the new user account
+# users: standard user group, wheel: allows sudo/su access
 groups=(users wheel)
 
 # Validate required groups exist
@@ -99,6 +101,8 @@ hashpw() {
 	openssl passwd -6 -salt "$salt" "$plain_password"
 }
 
+# Validate SHA-512 password hash format: $6$salt$hash
+# $6$ = SHA-512, followed by base64-encoded salt and 43+ char hash
 is_hash_like() {
 	[[ "$1" =~ ^\$6\$[A-Za-z0-9./]+\$[A-Za-z0-9./]{43,}$ ]]
 }
@@ -166,7 +170,8 @@ user_exists_by_name() {
 
 validate_username() {
 	local username="$1"
-	# POSIX username: start with [a-z_], then [a-z0-9_-]{0,30}, optionally ending with $
+	# POSIX username validation: start with [a-z_], then [a-z0-9_-]{0,30}, optionally ending with $
+	# This ensures compatibility across Unix-like systems (mostly matches shadow-utils, systemd style)
 	if [[ ! "$username" =~ ^[a-z_][a-z0-9_-]{0,30}\$?$ ]]; then
 		eerror "Username must start with a letter or underscore and contain only lowercase letters, digits, underscores, or dashes." >&2
 		return 1
@@ -331,6 +336,7 @@ main_oobe_loop() {
 			printf '%s:%s\n' "root" "$root_hash" | maybe_run chpasswd -e
 			chpasswd_root_status=$?
 
+			# Clear sensitive data from memory immediately
 			password=''
 			user_hash=''
 			root_hash=''
@@ -348,6 +354,8 @@ main_oobe_loop() {
 			einfo "'root' password set to match the new user password."
 
 			if [[ "$has_network" == "true" ]]; then
+				# Configure binary package verification and setup ::gentoo
+				# requires network connectivity to download keys and sync
 				einfo "Configuring binary package verification keyring with Gentoo trust tool (getuto) ..."
 				maybe_run_quiet getuto
 				if [[ $? -eq 0 ]]; then
@@ -363,8 +371,9 @@ main_oobe_loop() {
 				einfo "syncing the Gentoo repository ..."
 				maybe_run_quiet emerge --sync
 			else
-				ewarn "Network connectivity unavailable - skipping getuto binary package setup"
-				ewarn "You can run 'getuto' manually later when network is available"
+				# Network-dependent setup must be deferred when offline
+				ewarn "Network connectivity unavailable - skipping getuto binary package setup."
+				ewarn "You can run 'getuto' manually later when network is available;"
 				ewarn "the Gentoo repository will need to be synced manually before portage can be used."
 			fi
 

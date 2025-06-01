@@ -393,6 +393,15 @@ main_oobe_loop() {
 				maybe_run_quiet eselect repository enable gentoo
 				einfo "syncing the Gentoo repository ..."
 				maybe_run emerge --sync
+				if [[ $? -eq 0 ]]; then
+					einfo "Gentoo repository synced successfully."
+					# WSL users really only need to read news that came out after the first sync.
+					maybe_run eselect news read --quiet
+					maybe_run eselect news purge
+				else
+					ewarn "Warning: Failed to sync Gentoo repository, this is not a critical issue,"
+					ewarn "but you may want to run 'emerge --sync' manually later."
+				fi
 			else
 				# Network-dependent setup must be deferred when offline
 				ewarn "Network connectivity unavailable - skipping getuto binary package setup."

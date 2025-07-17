@@ -177,8 +177,8 @@ show_install_tips() {
 		      This can save time and resources. See:
 		        https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart
 		    - For privilege escalation helpers:
-		        su -c 'emerge app-admin/sudo'
 		        su -c 'emerge app-admin/doas'
+		        su -c 'emerge app-admin/sudo'
 
 		Resources:
 		    Gentoo Forums:        https://forums.gentoo.org/

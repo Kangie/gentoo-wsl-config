@@ -170,10 +170,10 @@ show_install_tips() {
 		OOBE complete!${mode}
 
 		Installation Tips:
-		    - Elevate privileges to root using 'su' until you set up sudo or doas.
-		    - Use 'emerge --sync' to sync the portage tree (as root).
-		      + 'emerge-webrsync' is a good alternative for systems with restricted network access.
-		    - Use 'emerge -uDNav @world' to update the system (as root).
+		    - Elevate privileges to root using \`su\` until you set up sudo or doas.
+		    - Use \`emerge --sync\` to sync the portage tree (as root).
+		      + \`emerge-webrsync\` is a good alternative for systems with restricted network access.
+		    - Use \`emerge -uDNav @world\` to update the system (as root).
 		    - Read the Gentoo Handbook for more information:
 		        https://wiki.gentoo.org/wiki/Handbook:Main_Page
 		    - Consider using the binary package host (binhost) and only compiling
@@ -341,7 +341,7 @@ set_and_generate_locale() {
 	mapfile -t valid_locales < <(find /usr/share/i18n/locales/ -maxdepth 1 -type f -not -name "*@*" -not -name "*1*" -not -name "*translit*" -printf "%f\n" | sort -u)
 
 	echo "We can set up a some locale settings now if you would like; this will prevent"
-	echo "a (harmless) warning when running 'emerge' or other commands that require locale settings."
+	echo "a (harmless) warning when running \`emerge\` or other commands that require locale settings."
 	echo "You can also skip this step and set up locales later by"
 	echo "editing \`/etc/locale.gen\` and running \`locale-gen\`."
 	echo "See https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Base#Locale_generation for more information."
@@ -530,7 +530,7 @@ main_oobe_loop() {
 					maybe_run_quiet eselect repository remove -f gentoo
 				fi
 				# use eselect repository to add the gentoo repository; use `add`, `enable` is not consistent
-				maybe_run_quiet eselect repository add gentoo git ${GENTOO_SYNC_URI}
+				maybe_run_quiet eselect repository add gentoo git "${GENTOO_SYNC_URI}"
 				# enable repository verification
 				maybe_run_quiet sh -c 'echo "sync-git-verify-commit-signature = yes" >> /etc/portage/repos.conf/eselect-repo.conf'
 				einfo "syncing the Gentoo repository ..."

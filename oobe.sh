@@ -275,8 +275,7 @@ mask_systemd_units() {
 	# in the future; at least it's not a footgun!
 	einfo "Masking known problematic systemd units for WSL compatibility."
 	for unit in "${known_bad_units[@]}"; do
-		maybe_run_quiet systemctl mask "$unit"
-		if [[ $? -ne 0 ]]; then
+		if ! maybe_run_quiet systemctl mask "$unit"; then
 			ewarn "Failed to mask unit: $unit"
 		fi
 	done
@@ -318,7 +317,7 @@ fi
 
 main_oobe_loop() {
 	local username password user_hash root_hash
-	local chpasswd_user_status chpasswd_root_status
+	local chpasswd_user_success chpasswd_root_success
 	local has_network="false"
 
 	edebug "Starting OOBE loop"
@@ -339,11 +338,10 @@ main_oobe_loop() {
 		fi
 		password=$(prompt_password "$username")
 
-		maybe_run /usr/sbin/useradd -m -u "$DEFAULT_UID" \
+		if maybe_run /usr/sbin/useradd -m -u "$DEFAULT_UID" \
 			-s /bin/bash -c '' \
 			-G "$(IFS=,; echo "${groups[*]}")" \
-			"$username"
-		if [[ $? == 0 || -n "$DEBUG_OOBE" ]]; then
+			"$username" || [[ -n "$DEBUG_OOBE" ]]; then
 			user_hash=$(hashpw "$password")
 			root_hash=$(hashpw "$password")
 
@@ -353,19 +351,28 @@ main_oobe_loop() {
 				cleanup_and_exit "Generated root password hash does not look valid: $root_hash"
 			fi
 
-			printf '%s:%s\n' "$username" "$user_hash" | maybe_run chpasswd -e
-			chpasswd_user_status=$?
+			# Set user password
+			if printf '%s:%s\n' "$username" "$user_hash" | maybe_run chpasswd -e; then
+				chpasswd_user_success=true
+			else
+				chpasswd_user_success=false
+			fi
 
-			printf '%s:%s\n' "root" "$root_hash" | maybe_run chpasswd -e
-			chpasswd_root_status=$?
+			# Set root password
+			if printf '%s:%s\n' "root" "$root_hash" | maybe_run chpasswd -e; then
+				chpasswd_root_success=true
+			else
+				chpasswd_root_success=false
+			fi
 
 			clear_sensitive_vars password user_hash root_hash
 
-			if [[ $chpasswd_user_status -ne 0 && $chpasswd_root_status -ne 0 ]]; then
+			# If this somehow fails we want good debug info - we can't expect good logs...
+			if [[ "$chpasswd_user_success" == "false" && "$chpasswd_root_success" == "false" ]]; then
 				cleanup_and_exit "Failed to set passwords for both user '$username' and root."
-			elif [[ $chpasswd_user_status -ne 0 ]]; then
+			elif [[ "$chpasswd_user_success" == "false" ]]; then
 				cleanup_and_exit "Failed to set password for user '$username', but root password was set."
-			elif [[ $chpasswd_root_status -ne 0 ]]; then
+			elif [[ "$chpasswd_root_success" == "false" ]]; then
 				cleanup_and_exit "Failed to set password for root, but user '$username' password was set."
 			fi
 
@@ -376,8 +383,7 @@ main_oobe_loop() {
 				# Configure binary package verification and setup ::gentoo
 				# requires network connectivity to download keys and sync
 				einfo "Configuring binary package verification keyring with Gentoo trust tool (getuto) ..."
-				maybe_run_quiet getuto
-				if [[ $? -eq 0 ]]; then
+				if maybe_run_quiet getuto; then
 					einfo "getuto configuration completed successfully"
 				else
 					ewarn "Warning: getuto configuration failed, this is not a critical issue,"
@@ -392,8 +398,7 @@ main_oobe_loop() {
 				# creating it with eselect-repository will default to git sync
 				maybe_run_quiet eselect repository enable gentoo
 				einfo "syncing the Gentoo repository ..."
-				maybe_run emerge --sync
-				if [[ $? -eq 0 ]]; then
+				if maybe_run emerge --sync; then
 					einfo "Gentoo repository synced successfully."
 					# WSL users really only need to read news that came out after the first sync.
 					maybe_run eselect news read --quiet

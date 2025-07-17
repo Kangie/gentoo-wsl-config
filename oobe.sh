@@ -282,6 +282,103 @@ mask_systemd_units() {
 	done
 }
 
+# Expand short locale format (e.g., "en_US" -> "en_US.UTF-8 UTF-8")
+# Prefers UTF-8 encoding, falls back to first available encoding
+expand_locale_shorthand() {
+	local short_locale="$1"
+	local full_locale
+
+	# Try UTF-8 first (preferred)
+	full_locale=$(grep -E "^$short_locale\.UTF-8" /usr/share/i18n/SUPPORTED | head -n 1)
+	if [[ -n "$full_locale" ]]; then
+		echo "$full_locale"
+		return 0
+	fi
+
+	# Fall back to any encoding
+	full_locale=$(grep -E "^$short_locale\." /usr/share/i18n/SUPPORTED | head -n 1)
+	if [[ -n "$full_locale" ]]; then
+		echo "$full_locale"
+		return 0
+	fi
+
+	# No match found
+	return 1
+}
+
+set_and_generate_locale() {
+
+	# We need to set and generate some locales to avoid a scary
+	# `setlocale: unsupported locale setting` warning when running `emerge`
+	local locale
+	# This just gets us the list of valid locales, we can infer encoding and it's a lot easier
+	# for new users to understand.
+	local valid_locales=( $(find /usr/share/i18n/locales/ -maxdepth 1 -type f -not -name "*@*" -not -name "*1*" -not -name "*translit*" -printf "%f\n" | sort -u))
+
+	echo "We can set up a some locale settings now if you would like; this will prevent"
+	echo "a (harmless) warning when running 'emerge' or other commands that require locale settings."
+	echo "You can also skip this step and set up locales later by"
+	echo "editing \`/etc/locale.gen\` and running \`locale-gen\`."
+	echo "See https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Base#Locale_generation for more information."
+
+	read -r -p "Do you want to set up a locale now? [Y/n]: " set_locale
+	if [[ "$set_locale" =~ ^[Nn][Oo]?$ ]]; then
+		return 0
+	fi
+
+	echo
+	echo "Please select a locale, or press Enter to use the default (\`en_US\`)"
+	echo "You can type 'show' to see a list of supported locales."
+	echo
+	echo "A particular locale and encoding combination (e.g. en_US.UTF-8 UTF-8) can be selected."
+	echo "If you aren't sure, use the default; this can be changed later."
+
+	while true; do
+		read -r -p "Locale (default: en_US): " locale
+
+		# Handle default case
+		if [[ -z "$locale" ]]; then
+			locale="en_US.UTF-8 UTF-8"
+			break
+		fi
+
+		# Handle show command
+		if [[ "$locale" == [Ss][Hh][Oo][Ww] ]]; then
+			echo "Available locales:"
+			echo "${valid_locales[@]}" | pr -9ts"$(printf "\t\t")"
+			echo "Please select a locale from the list above."
+			continue
+		fi
+
+		# Expand short locale format (e.g., "en_US" -> "en_US.UTF-8 UTF-8")
+		if [[ "$locale" =~ ^[a-z]{2}_[A-Z]{2}$ ]]; then
+			locale=$(expand_locale_shorthand "$locale")
+			if [[ -z "$locale" ]]; then
+				echo "No matching locale found for the specified country code."
+				continue
+			fi
+		fi
+
+		# Validate final locale format
+		if grep -q "^$locale$" /usr/share/i18n/SUPPORTED; then
+			break
+		else
+			echo "Invalid locale format or not found in SUPPORTED locales: '$locale'."
+			echo "Use 'show' to see available locales or try a format like 'en_US.UTF-8 UTF-8'."
+			continue
+		fi
+	done
+
+	if [[ -z "$DEBUG_OOBE" ]]; then
+		echo "${locale}" >> /etc/locale.gen
+	else
+		echo "DEBUG_OOBE is set: Not modifying /etc/locale.gen"
+		echo "Would Run \`echo \"${locale}\" >> /etc/locale.gen\`"
+	fi
+	maybe_run locale-gen
+
+}
+
 cleanup_and_exit() {
 	einfo "Cleaning up user '$username'."
 	maybe_run userdel -r "$username"
@@ -371,6 +468,10 @@ main_oobe_loop() {
 
 			einfo "User '$username' created successfully."
 			einfo "'root' password set to match the new user password."
+
+			set_and_generate_locale
+
+			maybe_run_quiet etc-update
 
 			if [[ "$has_network" == "true" ]]; then
 				# Configure binary package verification and setup ::gentoo

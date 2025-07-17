@@ -12,6 +12,7 @@
 # Exit codes from report_bug() and die() are used for specific error reporting.
 
 DEFAULT_UID=1000
+GENTOO_SYNC_URI="https://github.com/gentoo-mirror/gentoo.git"
 
 set -ue
 set -o pipefail
@@ -528,8 +529,10 @@ main_oobe_loop() {
 					einfo "Disabling and removing existing gentoo repository ..."
 					maybe_run_quiet eselect repository remove -f gentoo
 				fi
-				# creating it with eselect-repository will default to git sync
-				maybe_run_quiet eselect repository enable gentoo
+				# use eselect repository to add the gentoo repository; use `add`, `enable` is not consistent
+				maybe_run_quiet eselect repository add gentoo git ${GENTOO_SYNC_URI}
+				# enable repository verification
+				maybe_run_quiet sh -c 'echo "sync-git-verify-commit-signature = yes" >> /etc/portage/repos.conf/eselect-repo.conf'
 				einfo "syncing the Gentoo repository ..."
 				if maybe_run emerge --sync; then
 					einfo "Gentoo repository synced successfully."

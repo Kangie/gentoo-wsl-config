@@ -55,7 +55,10 @@ report_bug() {
 }
 
 # Check for required external commands
-# Don't check for systemctl; we'll assume it's available if systemd is detected
+# Don't check for:
+# - passwdqc; part of base stage3, and we don't want to enforce password complexity
+# - systemctl; we'll assume it's available if systemd is detected
+
 for cmd in chpasswd getuto openssl pr useradd; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
 		eerror "Required command '$cmd' not found."
@@ -237,16 +240,25 @@ prompt_password() {
 			continue
 		fi
 
-		if command -v pwqcheck >/dev/null 2>&1; then
-			result=$(echo "$password" | pwqcheck -1 2>&1 | tr -d '\r\n')
-			if [[ "$result" != "OK" ]]; then
-				tty_echo "Password complexity check failed: $result"
-				tty_echo "Please try again."
-				sleep 1
-				continue
+		# Even though WSL stage4 images remove the pwqcheck USE flag by default,
+		# the binary will be installed because we haven't depcleaned the system yet.
+		# Additionally this script / package may be installed on a system built from
+		# a 'normal' stage3 with USE pwqcheck enabled; we need to check the PAM configuration.
+		if grep 'passwdqc' /etc/pam.d/system-auth; then
+			edebug "${FUNCNAME[0]}: PAM passwdqc module detected, checking password complexity."
+			if command -v pwqcheck >/dev/null 2>&1; then
+				result=$(echo "$password" | pwqcheck -1 2>&1 | tr -d '\r\n')
+				if [[ "$result" != "OK" ]]; then
+					tty_echo "Password complexity check failed: $result"
+					tty_echo "Please try again."
+					sleep 1
+					continue
+				fi
+			else
+				tty_echo "Warning: Password complexity check (pwqcheck) not available. Proceeding without it."
 			fi
 		else
-			tty_echo "Warning: Password complexity check (pwqcheck) not available. Proceeding without it."
+			edebug "${FUNCNAME[0]}: PAM passwdqc module not detected, skipping complexity check."
 		fi
 
 		read -r -s -p "Confirm password: " password2 < /dev/tty
@@ -295,10 +307,10 @@ expand_locale_shorthand() {
 	local short_locale="$1"
 	local full_locale
 
-	edebug "expand_locale_shorthand: input='$short_locale'"
+	edebug "${FUNCNAME[0]}: input='$short_locale'"
 	# Try UTF-8 first (preferred)
 	full_locale=$(grep -E "^$short_locale\.UTF-8" /usr/share/i18n/SUPPORTED | head -n 1)
-	edebug "expand_locale_shorthand: utf8 result='$full_locale'"
+	edebug "${FUNCNAME[0]}: utf8 result='$full_locale'"
 	if [[ -n "$full_locale" ]]; then
 		echo "$full_locale"
 		return 0
@@ -306,13 +318,13 @@ expand_locale_shorthand() {
 
 	# Fall back to any encoding
 	full_locale=$(grep -E "^$short_locale\." /usr/share/i18n/SUPPORTED | head -n 1)
-	edebug "expand_locale_shorthand: fallback result='$full_locale'"
+	edebug "${FUNCNAME[0]}: fallback result='$full_locale'"
 	if [[ -n "$full_locale" ]]; then
 		echo "$full_locale"
 		return 0
 	fi
 
-	edebug "expand_locale_shorthand: no match for '$short_locale'"
+	edebug "${FUNCNAME[0]}: no match for '$short_locale'"
 	# No match found
 	return 1
 }
@@ -364,9 +376,9 @@ set_and_generate_locale() {
 
 		# Expand short locale format (e.g., "en_US" -> "en_US.UTF-8 UTF-8")
 		if [[ "$locale" =~ ^[a-z]{2}_[A-Z]{2}$ ]]; then
-			edebug "Detected short locale format: $locale"
+			edebug "${FUNCNAME[0]}: Detected short locale format: $locale"
 			locale=$(expand_locale_shorthand "$locale") || true
-			edebug "Expanded locale: $locale"
+			edebug "${FUNCNAME[0]}: Expanded locale: $locale"
 			if [[ -z "$locale" ]]; then
 				echo "No matching locale found for the specified country code."
 				continue
@@ -391,8 +403,8 @@ set_and_generate_locale() {
 			echo "Locale '$locale' already present in /etc/locale.gen, not adding duplicate."
 		fi
 	else
-		echo "DEBUG_OOBE is set: Not modifying /etc/locale.gen"
-		echo "Would Run \`echo \"${locale}\" >> /etc/locale.gen\`"
+		edebug "${FUNCNAME[0]}: debug mode: Not modifying /etc/locale.gen"
+		edebug "Would run: \`echo \"${locale}\" >> /etc/locale.gen\`"
 	fi
 	maybe_run locale-gen
 

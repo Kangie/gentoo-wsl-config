@@ -295,8 +295,10 @@ expand_locale_shorthand() {
 	local short_locale="$1"
 	local full_locale
 
+	edebug "expand_locale_shorthand: input='$short_locale'"
 	# Try UTF-8 first (preferred)
 	full_locale=$(grep -E "^$short_locale\.UTF-8" /usr/share/i18n/SUPPORTED | head -n 1)
+	edebug "expand_locale_shorthand: utf8 result='$full_locale'"
 	if [[ -n "$full_locale" ]]; then
 		echo "$full_locale"
 		return 0
@@ -304,11 +306,13 @@ expand_locale_shorthand() {
 
 	# Fall back to any encoding
 	full_locale=$(grep -E "^$short_locale\." /usr/share/i18n/SUPPORTED | head -n 1)
+	edebug "expand_locale_shorthand: fallback result='$full_locale'"
 	if [[ -n "$full_locale" ]]; then
 		echo "$full_locale"
 		return 0
 	fi
 
+	edebug "expand_locale_shorthand: no match for '$short_locale'"
 	# No match found
 	return 1
 }
@@ -360,7 +364,9 @@ set_and_generate_locale() {
 
 		# Expand short locale format (e.g., "en_US" -> "en_US.UTF-8 UTF-8")
 		if [[ "$locale" =~ ^[a-z]{2}_[A-Z]{2}$ ]]; then
-			locale=$(expand_locale_shorthand "$locale")
+			edebug "Detected short locale format: $locale"
+			locale=$(expand_locale_shorthand "$locale") || true
+			edebug "Expanded locale: $locale"
 			if [[ -z "$locale" ]]; then
 				echo "No matching locale found for the specified country code."
 				continue

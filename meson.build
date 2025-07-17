@@ -43,3 +43,13 @@ install_data(
     install_dir: get_option('datadir') / 'wsl',
     install_mode: 'rw-r--r--',
 )
+
+### Tests
+
+# This is a basic sanity check that we're not committing garbage.
+test(
+    'bash_syntax_check_oobe',
+    find_program('bash'),
+    args: ['-n', files('oobe.sh')],
+    suite: 'syntax'
+)

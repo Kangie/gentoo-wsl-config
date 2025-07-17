@@ -74,7 +74,7 @@ for grp in "${groups[@]}"; do
 done
 
 # Trap to unset sensitive variables on exit
-trap 'unset password password2 username user_hash root_hash' EXIT
+trap 'unset password password2 username user_hash root_hash 2>/dev/null || true' EXIT
 
 # =========================
 # Helper Functions

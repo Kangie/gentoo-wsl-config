@@ -94,6 +94,12 @@ trap 'unset password password2 username user_hash root_hash 2>/dev/null || true'
 
 check_network_connectivity() {
 	local test_hosts=("1.1.1.1" "8.8.8.8" "9.9.9.9" "www.gentoo.org")
+	local test_uris=(
+		"https://api.gentoo.org/mirrors/distfiles.xml"
+		"https://github.com"
+		"https://connectivitycheck.grapheneos.network/generate_204"
+		"https://www.gentoo.org"
+	)
 	local timeout=5
 
 	edebug "Checking network connectivity..."
@@ -101,7 +107,12 @@ check_network_connectivity() {
 	for host in "${test_hosts[@]}"; do
 		if ping -c 1 -W "$timeout" "$host" >/dev/null 2>&1; then
 			edebug "Network connectivity confirmed via $host"
-			return 0
+			for uri in "${test_uris[@]}"; do
+				if curl -fsSL -o /dev/null -w "%{http_code}" --connect-timeout "$timeout" "$uri" | grep -q -E '^20[0-9]$'; then
+					edebug "Network connectivity confirmed via $uri"
+					return 0
+				fi
+			done
 		fi
 	done
 

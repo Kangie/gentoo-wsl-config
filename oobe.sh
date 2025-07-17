@@ -100,9 +100,9 @@ check_network_connectivity() {
 		"https://connectivitycheck.grapheneos.network/generate_204"
 		"https://www.gentoo.org"
 	)
-	local timeout=5
+	local timeout=2
 
-	edebug "Checking network connectivity..."
+	einfo "Checking network connectivity ..."
 
 	for host in "${test_hosts[@]}"; do
 		if ping -c 1 -W "$timeout" "$host" >/dev/null 2>&1; then

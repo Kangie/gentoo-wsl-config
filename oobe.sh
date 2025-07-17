@@ -3,6 +3,13 @@
 # This script is run during the first launch of the Gentoo WSL distribution.
 # It sets up a user account and configures the root password.
 # https://learn.microsoft.com/en-us/windows/wsl/build-custom-distro#add-the-wsl-distribution-configuration-file
+#
+# Error Codes:
+#   97 - Required external command not found
+#   98 - Required group does not exist
+#   99 - Script not run under bash
+#
+# Exit codes from report_bug() and die() are used for specific error reporting.
 
 DEFAULT_UID=1000
 
@@ -48,7 +55,8 @@ report_bug() {
 }
 
 # Check for required external commands
-for cmd in chpasswd getuto openssl; do
+# Don't check for systemctl; we'll assume it's available if systemd is detected
+for cmd in chpasswd getuto openssl pr useradd; do
 	if ! command -v "$cmd" >/dev/null 2>&1; then
 		eerror "Required command '$cmd' not found."
 		report_bug 97
@@ -312,7 +320,8 @@ set_and_generate_locale() {
 	local locale
 	# This just gets us the list of valid locales, we can infer encoding and it's a lot easier
 	# for new users to understand.
-	local valid_locales=( $(find /usr/share/i18n/locales/ -maxdepth 1 -type f -not -name "*@*" -not -name "*1*" -not -name "*translit*" -printf "%f\n" | sort -u))
+	local valid_locales=()
+	mapfile -t valid_locales < <(find /usr/share/i18n/locales/ -maxdepth 1 -type f -not -name "*@*" -not -name "*1*" -not -name "*translit*" -printf "%f\n" | sort -u)
 
 	echo "We can set up a some locale settings now if you would like; this will prevent"
 	echo "a (harmless) warning when running 'emerge' or other commands that require locale settings."
@@ -369,7 +378,12 @@ set_and_generate_locale() {
 	done
 
 	if [[ -z "$DEBUG_OOBE" ]]; then
-		echo "${locale}" >> /etc/locale.gen
+		# Only append if not already present
+		if ! grep -q "^$locale$" /etc/locale.gen 2>/dev/null; then
+			echo "${locale}" >> /etc/locale.gen
+		else
+			echo "Locale '$locale' already present in /etc/locale.gen, not adding duplicate."
+		fi
 	else
 		echo "DEBUG_OOBE is set: Not modifying /etc/locale.gen"
 		echo "Would Run \`echo \"${locale}\" >> /etc/locale.gen\`"

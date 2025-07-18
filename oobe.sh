@@ -178,6 +178,19 @@ clear_sensitive_vars() {
 	done
 }
 
+# Append content to a file with dry-run support
+append_file() {
+	local content="$1"
+	local file="$2"
+
+	if [[ "$DRY_RUN" == "true" ]]; then
+		edebug " ${FUNCNAME[0]}: Would append to $file: $content"
+	else
+		edebug " ${FUNCNAME[0]}: Appending to $file: $content"
+		echo "$content" >> "$file"
+	fi
+}
+
 maybe_run() {
 	if [[ "$DRY_RUN" == "true" ]]; then
 		edebug "Would run:" "$@"
@@ -437,17 +450,12 @@ set_and_generate_locale() {
 		fi
 	done
 
-	if [[ "$DRY_RUN" == "false" ]]; then
-		# Only append if not already present
-		if ! grep -q "^$locale$" /etc/locale.gen 2>/dev/null; then
-			echo "${locale}" >> /etc/locale.gen
-		else
-			echo "Locale '$locale' already present in /etc/locale.gen, not adding duplicate."
-		fi
+	if ! grep -q "^$locale$" /etc/locale.gen 2>/dev/null; then
+		append_file "$locale" /etc/locale.gen
 	else
-		edebug "${FUNCNAME[0]}: dry run mode: Not modifying /etc/locale.gen"
-		edebug "Would run: \`echo \"${locale}\" >> /etc/locale.gen\`"
+		echo "Locale '$locale' already present in /etc/locale.gen, not adding duplicate."
 	fi
+
 	maybe_run locale-gen
 
 }
@@ -571,7 +579,7 @@ main_oobe_loop() {
 				# use eselect repository to add the gentoo repository; use `add`, `enable` is not consistent
 				maybe_run_quiet eselect repository add gentoo git "${GENTOO_SYNC_URI}"
 				# enable repository verification
-				maybe_run_quiet sh -c 'echo "sync-git-verify-commit-signature = yes" >> /etc/portage/repos.conf/eselect-repo.conf'
+				append_file "sync-git-verify-commit-signature = yes" /etc/portage/repos.conf/eselect-repo.conf
 				einfo "syncing the Gentoo repository ..."
 				if maybe_run emerge --sync; then
 					einfo "Gentoo repository synced successfully."

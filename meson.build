@@ -1,4 +1,4 @@
-project('gentoo-wsl-config', 'c', version: '0.1.12', meson_version: '>=1.1.0')  # meson.options
+project('gentoo-wsl-config', 'c', version: '0.1.13', meson_version: '>=1.1.0')  # meson.options
 # This is not the 'c' you're looking for
 
 # This project creates and installs the WSL configuration files for Gentoo Linux.

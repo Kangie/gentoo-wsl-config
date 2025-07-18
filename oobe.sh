@@ -14,6 +14,34 @@
 DEFAULT_UID=1000
 GENTOO_SYNC_URI="https://github.com/gentoo-mirror/gentoo.git"
 
+# Parse command line arguments
+DRY_RUN=false
+DEBUG_LOGGING=${OOBE_DEBUG:-}
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--dry-run)
+			DRY_RUN=true
+			shift
+			;;
+		--debug)
+			DEBUG_LOGGING=1
+			shift
+			;;
+		-h|--help)
+			echo "Usage: $0 [--dry-run] [--debug]"
+			echo "  --dry-run   Show what would be done without making changes"
+			echo "  --debug     Enable debug logging"
+			exit 0
+			;;
+		*)
+			echo "Unknown option: $1" >&2
+			echo "Use --help for usage information" >&2
+			exit 1
+			;;
+	esac
+done
+
 set -ue
 set -o pipefail
 
@@ -24,7 +52,7 @@ set -o pipefail
 export LC_ALL=C # Useful for hashes, required for eselect repository
 
 edebug() {
-	if [[ -n "$DEBUG_OOBE" ]]; then
+	if [[ -n "$DEBUG_LOGGING" ]]; then
 		echo -e " \033[35;1m*\033[0m [DEBUG] $*" >&2
 	fi
 }
@@ -151,25 +179,27 @@ clear_sensitive_vars() {
 }
 
 maybe_run() {
-	if [[ -n "$DEBUG_OOBE" ]]; then
+	if [[ "$DRY_RUN" == "true" ]]; then
 		edebug "Would run:" "$@"
 	else
+		edebug "Running:" "$@"
 		"$@"
 	fi
 }
 
 maybe_run_quiet() {
-	if [[ -n "$DEBUG_OOBE" ]]; then
+	if [[ "$DRY_RUN" == "true" ]]; then
 		edebug "Would run (quiet):" "$@"
 	else
+		edebug "Running (quiet):" "$@"
 		"$@" >/dev/null 2>&1
 	fi
 }
 
 show_install_tips() {
 	local mode
-	if [[ -n "$DEBUG_OOBE" ]]; then
-		mode="(DEBUG mode)"
+	if [[ "$DRY_RUN" == "true" ]]; then
+		mode="(DRY RUN mode)"
 	else
 		mode=""
 	fi
@@ -407,7 +437,7 @@ set_and_generate_locale() {
 		fi
 	done
 
-	if [[ -z "$DEBUG_OOBE" ]]; then
+	if [[ "$DRY_RUN" == "false" ]]; then
 		# Only append if not already present
 		if ! grep -q "^$locale$" /etc/locale.gen 2>/dev/null; then
 			echo "${locale}" >> /etc/locale.gen
@@ -415,7 +445,7 @@ set_and_generate_locale() {
 			echo "Locale '$locale' already present in /etc/locale.gen, not adding duplicate."
 		fi
 	else
-		edebug "${FUNCNAME[0]}: debug mode: Not modifying /etc/locale.gen"
+		edebug "${FUNCNAME[0]}: dry run mode: Not modifying /etc/locale.gen"
 		edebug "Would run: \`echo \"${locale}\" >> /etc/locale.gen\`"
 	fi
 	maybe_run locale-gen
@@ -445,11 +475,9 @@ echo 'For more information visit: https://aka.ms/wslusers'
 # Main Logic
 # =========================
 
-DEBUG_OOBE="${DEBUG_OOBE:-}"
+edebug "Starting OOBE script with DRY_RUN=$DRY_RUN, DEBUG_LOGGING=$DEBUG_LOGGING"
 
-edebug "DEBUG_OOBE is set: Skipping user_exists_by_uid check and system modifications."
-
-if [[ -z "$DEBUG_OOBE" ]]; then
+if [[ "$DRY_RUN" == "false" ]]; then
 	if user_exists_by_uid "$DEFAULT_UID"; then
 		einfo 'User account already exists, skipping creation'
 		exit 0
@@ -482,7 +510,7 @@ main_oobe_loop() {
 		if maybe_run /usr/sbin/useradd -m -u "$DEFAULT_UID" \
 			-s /bin/bash -c '' \
 			-G "$(IFS=,; echo "${groups[*]}")" \
-			"$username" || [[ -n "$DEBUG_OOBE" ]]; then
+			"$username" || [[ "$DRY_RUN" == "true" ]]; then
 			user_hash=$(hashpw "$password")
 			root_hash=$(hashpw "$password")
 
@@ -570,7 +598,11 @@ main_oobe_loop() {
 				ewarn "Run \`wsl --terminate Gentoo\` or \`wsl --shutdown\` in PowerShell or Command Prompt."
 			fi
 
-			edebug "OOBE complete! No changes made."
+			if [[ "$DRY_RUN" == "true" ]]; then
+				edebug "OOBE complete! No changes made (dry run mode)."
+			else
+				edebug "OOBE complete!"
+			fi
 			show_install_tips
 			echo
 

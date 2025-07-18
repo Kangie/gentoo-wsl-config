@@ -2,3 +2,8 @@
 # gentoo-wsl-config-@version@
 [boot]
 systemd=@systemd@
+
+# Enable WSL to launch Windows processes
+[interop]
+enabled = @interop@
+appendWindowsPath = @interop@

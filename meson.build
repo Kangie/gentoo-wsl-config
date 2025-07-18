@@ -8,6 +8,7 @@ configure_file(
     output: 'wsl.conf',
     configuration: configuration_data(
         {
+            'interop': get_option('interop').to_string().to_lower(),
             'systemd': get_option('systemd').to_string().to_lower(),
             'version': meson.project_version(),
         },

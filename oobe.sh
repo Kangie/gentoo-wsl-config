@@ -385,7 +385,6 @@ expand_locale_shorthand() {
 }
 
 set_and_generate_locale() {
-
 	# We need to set and generate some locales to avoid a scary
 	# `setlocale: unsupported locale setting` warning when running `emerge`
 	local locale

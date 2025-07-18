@@ -4,3 +4,10 @@ option(
     value: false,
     description: 'Enable systemd support',
 )
+
+option(
+    'interop',
+    type: 'boolean',
+    value: true,
+    description: 'Enable interoperability with Windows processes',
+)

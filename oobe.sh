@@ -299,7 +299,7 @@ prompt_password() {
 		# the binary will be installed because we haven't depcleaned the system yet.
 		# Additionally this script / package may be installed on a system built from
 		# a 'normal' stage3 with USE pwqcheck enabled; we need to check the PAM configuration.
-		if grep 'passwdqc' /etc/pam.d/system-auth; then
+		if grep -q 'passwdqc' /etc/pam.d/system-auth; then
 			edebug "${FUNCNAME[0]}: PAM passwdqc module detected, checking password complexity."
 			if command -v pwqcheck >/dev/null 2>&1; then
 				result=$(echo "$password" | pwqcheck -1 2>&1 | tr -d '\r\n')

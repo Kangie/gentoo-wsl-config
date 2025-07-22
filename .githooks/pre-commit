@@ -1,0 +1,24 @@
+#!/bin/bash
+# Pre-commit hook: Ensure oobe.sh is valid before allowing commit
+# - Checks for bash syntax errors
+# - Optionally runs shellcheck if available
+
+set -e
+
+SCRIPT="oobe.sh"
+
+if ! bash -n "$SCRIPT"; then
+	echo "[pre-commit] ERROR: $SCRIPT has syntax errors. Commit aborted." >&2
+	exit 1
+fi
+
+if command -v shellcheck >/dev/null 2>&1; then
+	shellcheck "$SCRIPT" || {
+		echo "[pre-commit] ERROR: $SCRIPT failed shellcheck. Commit aborted." >&2
+		exit 1
+	}
+else
+	echo "[pre-commit] INFO: shellcheck not found, skipping lint." >&2
+fi
+
+exit 0

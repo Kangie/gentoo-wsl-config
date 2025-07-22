@@ -388,6 +388,7 @@ set_and_generate_locale() {
 	# We need to set and generate some locales to avoid a scary
 	# `setlocale: unsupported locale setting` warning when running `emerge`
 	local locale
+	local changes_made=false
 	# This just gets us the list of valid locales, we can infer encoding and it's a lot easier
 	# for new users to understand.
 	local valid_locales=()
@@ -401,7 +402,7 @@ set_and_generate_locale() {
 
 	read -r -p "Do you want to set up a locale now? [Y/n]: " set_locale
 	if [[ "$set_locale" =~ ^[Nn][Oo]?$ ]]; then
-		return 0
+		return 1  # No changes made, no restart needed
 	fi
 
 	echo
@@ -451,11 +452,17 @@ set_and_generate_locale() {
 
 	if ! grep -q "^$locale$" /etc/locale.gen 2>/dev/null; then
 		append_file "$locale" /etc/locale.gen
+		changes_made=true
 	else
 		echo "Locale '$locale' already present in /etc/locale.gen, not adding duplicate."
 	fi
 
-	maybe_run locale-gen
+	if [[ "$changes_made" == "true" ]]; then
+		maybe_run locale-gen
+		return 0
+	else
+		return 1
+	fi
 
 }
 
@@ -492,9 +499,11 @@ if [[ "$DRY_RUN" == "false" ]]; then
 fi
 
 main_oobe_loop() {
-	local username password user_hash root_hash
+	local username password user_hash root_hash restart_reasons
 	local chpasswd_user_success chpasswd_root_success
 	local has_network="false"
+	local wsl_restart_required=()
+
 
 	edebug "Starting OOBE loop"
 
@@ -555,7 +564,10 @@ main_oobe_loop() {
 			einfo "User '$username' created successfully."
 			einfo "'root' password set to match the new user password."
 
-			set_and_generate_locale
+			# Set up locale and check if a restart is required
+			if set_and_generate_locale; then
+				wsl_restart_required+=( "locale" )
+			fi
 
 			maybe_run_quiet etc-update
 
@@ -601,8 +613,7 @@ main_oobe_loop() {
 				mask_systemd_units
 				einfo "running systemd-machine-id-setup"
 				maybe_run systemd-machine-id-setup
-				ewarn "You should restart WSL to apply systemd changes."
-				ewarn "Run \`wsl --terminate Gentoo\` or \`wsl --shutdown\` in PowerShell or Command Prompt."
+				wsl_restart_required+=( "systemd" )
 			fi
 
 			if [[ "$DRY_RUN" == "true" ]]; then
@@ -610,6 +621,18 @@ main_oobe_loop() {
 			else
 				edebug "OOBE complete!"
 			fi
+			if [[ "${#wsl_restart_required[@]}" -gt 0 ]]; then
+				if [[ "${#wsl_restart_required[@]}" -gt 1 ]]; then
+					restart_reasons=$(printf '%s, ' "${wsl_restart_required[@]}" | sed 's/, $//')
+					einfo "WSL container restart required to apply the following changes: ${restart_reasons}."
+				else
+					einfo "WSL container restart required to apply the following change: ${wsl_restart_required[0]}."
+				fi
+				einfo "Please exit WSL and run \`wsl --terminate Gentoo\` or \`wsl --shutdown\` in PowerShell or Command Prompt."
+			else
+				edebug "No WSL restart required."
+			fi
+
 			show_install_tips
 			echo
 

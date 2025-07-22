@@ -64,3 +64,36 @@ If you are doing this manually, for some reason, you can install this package vi
 .. code-block:: console
 
     root@wsl# emerge sys-apps/gentoo-wsl-config
+
+Pre-commit Hook for oobe.sh
+--------------------------
+
+A pre-commit hook is provided in the `.githooks/` directory to help contributors avoid committing invalid shell scripts. This hook checks that `oobe.sh` is valid Bash and optionally runs `shellcheck` if available.
+
+**To enable the pre-commit hook:**
+
+.. code-block:: shell
+
+   git config core.hooksPath .githooks
+
+This will cause Git to use the hooks in `.githooks/` for all operations in this repository.
+
+**What the hook does:**
+
+- Blocks commits if `oobe.sh` has Bash syntax errors.
+- Runs `shellcheck` on `oobe.sh` if available, blocking the commit on lint errors.
+- Prints a message if `shellcheck` is not installed.
+
+**Manual check:**
+
+You can manually check your script before committing with:
+
+.. code-block:: shell
+
+   bash -n oobe.sh
+   shellcheck oobe.sh  # if installed
+
+Contributions
+-------------
+
+Contributions are welcome! Please ensure your changes pass the pre-commit checks before submitting a pull request.

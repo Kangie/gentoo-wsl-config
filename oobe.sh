@@ -514,9 +514,9 @@ main_oobe_loop() {
 	fi
 
 	while true; do
-		read -p 'Enter new UNIX username: ' username
+		read -r -p 'Enter new UNIX username: ' username
 		validate_username "$username" || continue
-		read -p "Create user '$username'? [y/N]: " confirm
+		read -r -p "Create user '$username'? [y/N]: " confirm
 		if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
 			echo "Aborted."
 			exit 1
